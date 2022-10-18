@@ -1,5 +1,18 @@
 from collections import Counter
 
+# Инструкция
+
+# Создание дерева
+# tree = get_tree_haffman("123456789")
+#
+# Получение словаря ключей
+# codes = get_code_haffman(tree)
+#
+# Шифрофвание. На выходе зашифрованная строка из нулей и единиц
+# coding_str = coding_haffman("123456789", codes)
+#
+# Декодирование
+# decoding_str = decoding_haffman(coding_str, codes)
 
 # Класс узлов
 class Node:
@@ -77,28 +90,3 @@ def decoding_haffman(string, codes):
                 i += len(codes[code])
         count += 1
     return res
-
-from get_signature import get
-def f():
-    return 1, 2
-
-tree = get_tree_haffman("123")
-print(get_code_haffman(tree, codes=dict()))
-tree = get_tree_haffman("456")
-print(get_code_haffman(tree, codes=dict()))
-
-# tree = get_tree_haffman("123456789")
-# #
-# # шифр
-# codes = get_code_haffman(tree)
-# print(codes)
-# #
-# coding_str = coding_haffman("123456789", codes)
-# print(coding_str)
-
-# s = str(hex(int(coding_str, 2)))[2:].encode()
-# s = str(bin(int(s.decode(), 16)))[2:]
-#
-# print('136'.rjust(4, "0"))
-#
-# decoding_str = decoding_haffman(coding_str, codes)
