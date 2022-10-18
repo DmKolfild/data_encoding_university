@@ -82,7 +82,10 @@ from get_signature import get
 def f():
     return 1, 2
 
-
+tree = get_tree_haffman("123")
+print(get_code_haffman(tree, codes=dict()))
+tree = get_tree_haffman("456")
+print(get_code_haffman(tree, codes=dict()))
 
 # tree = get_tree_haffman("123456789")
 # #
