@@ -1,18 +1,21 @@
+
 from collections import Counter
+
 
 # Инструкция
 
-# Создание дерева
+# # Создание дерева
 # tree = get_tree_haffman("123456789")
 #
-# Получение словаря ключей
-# codes = get_code_haffman(tree)
+# # Получение словаря частот
+# codes = get_code_haffman(tree, codes=dict())
 #
-# Шифрофвание. На выходе зашифрованная строка из нулей и единиц
+# # Шифрофвание. На выходе зашифрованная строка из нулей и единиц
 # coding_str = coding_haffman("123456789", codes)
 #
-# Декодирование
+# # Декодирование
 # decoding_str = decoding_haffman(coding_str, codes)
+
 
 # Класс узлов
 class Node:

@@ -1,178 +1,78 @@
 
 import datetime
 import time
-from get_signature import get
-from extennsion_ofset_signature import data
-from snoopy import snoopy, snoopy1
-from haffman import get_tree_haffman, get_code_haffman, coding_haffman, decoding_haffman
-import os
+from snoopy import snoopy
+from haffman import decoding_haffman
+from rle import coding_rle, decoding_rle
+from support_function import *
 
 
-# перевод числа в шестнадцатеричную систему
-def hex_format(string):
-    s = hex(string).replace("0x", "")
-    if len(s) % 2 == 1:
-        s = "0" + s
-    return bytearray.fromhex(s)
-
-
-# перевод числа в десятичное число
-def int_format(string):
-    hex_bytes = "".join(['{:02X}'.format(byte) for byte in string])
-    return int(hex_bytes, 16)
-
-
-def bin_to_hex(string, encryption_dict):
-    print(encryption_dict)
-    string = coding_haffman(string, encryption_dict)
-    string = "1" + string  # дописаваем первую единицу, чтобы при декодировании не отвалился первый ноль (нули)
-    # ПРИ ДЕКОДИРОВАНИИ НЕ ЗАБЫТЬ ПРО ЭТУ ЕДИНИЦУ!!!
-    string = (str(hex(int(string, 2)))[2:]).encode()
-    return string, len(string)
-
-
-# преобразование байтов в строку 256-символьного алфавита
-def bytes_to_256(string):
-    str_bytes = " ".join(['{:02X}'.format(byte) for byte in string])  # строка из байт 16-bit
-    str_alphabet = ""
-    for i in str_bytes.split():
-        str_alphabet += chr(int(i, 16))  # преобразуем в 256-символьный алфавит
-
-    return str_alphabet
-
-
-# преобразуем строку ascii в байты
-def str_to_bytes(string):
-    s = ""
-    for i in list(string):
-        s += (str(hex(ord(i)))[2:]).rjust(2, '0')
-    string = bytearray.fromhex(s)
-
-    return string
-
-
-# name_files = "test.txt ..\\test\\test_subset\\56.txt 123.webp J.jpg"
-name_files = "J.jpg test.txt ..\\test\\test_subset\\56.txt 123.webp"
+name_files = "test.txt ..\\test\\test_subset\\56.txt 123.webp J.jpg test2.txt"
+# name_files = "test2.txt"
 name_coder_file = "my_sig.snoopy"
-encryption_dict = ''  # с2
-# cловарь частот символов
-
-
-def prepared_file_for_report():
-    if name_coder_file in name_files:
-        print("Имя файла, в которые записывается закодированная информация, не должно быть в списке файлов")
-        return 0
-    # удаление файла, если он существует, а затем его создание вновь
-    try:
-        os.remove(str(os.path.abspath(name_coder_file)))
-    except:
-        print("Файла my_sig.snoopy нет, удаление невозможно")
-    # создать файл, если он отсутвует
-    with open(name_coder_file, "w") as f1:
-        pass
-
-
-def read_signature_from_file(name_file):
-    file_for_codec = {}
-    # открываем файл и определяем сигнатуру
-    with open(name_file, "r+b") as file:
-        info = get(file.read(128))
-
-    # по найденной сигнатуре из json файла берем информацию по данному типу файла
-    if info == "txt":
-        file_for_codec = {"id": 1, "extension": "txt", "offset": 0, "signature": [b""]}
-    else:
-        for element in data:
-            if element["extension"] == info:
-                file_for_codec = element
-
-    return file_for_codec
-
-
-def write_into_file(data_snoopy2):
-    # копирование данных, уже записанных в файл
-    with open(name_coder_file, 'rb') as original:
-        data_snoopy1 = original.read()
-
-    # запись старых и новых данных в один файл
-    with open(name_coder_file, 'wb') as modified:
-        modified.write(data_snoopy1 + data_snoopy2)
-
-
-def get_encrypt_dict(list_file):
-    all_data_from_file = b""
-    for name_file in list_file.split():
-        with open(name_file, "rb") as file:
-            all_data_from_file += file.read()
-    str_alphabet = bytes_to_256(all_data_from_file)
-
-    tree = get_tree_haffman(str_alphabet)  # создаем дерево шифрования
-    encrypt_dict = get_code_haffman(tree, codes=dict())  # Получаем словарь для шифрования
-
-    return encrypt_dict
+encryption_dict = ''  # cловарь частот символов
 
 
 def coder_without_encryptiion(name_file):
 
     file_for_codec = read_signature_from_file(name_file)
 
-    sig = snoopy1[1]["signature"]
+    sig = snoopy[1]["signature"]
 
-    ver = (hex_format(snoopy1[1]["version"])).rjust(snoopy1[1]["offset_code_alg"] - snoopy1[1]["offset_version"], b"\x00")
+    ver = (hex_format_bytes(snoopy[1]["version"])).rjust(snoopy[1]["offset_code_alg"] - snoopy[1]["offset_version"], b"\x00")
 
-    alg = (hex_format(1)).rjust(snoopy1[1]["offset_size_of_file"] - snoopy1[1]["offset_code_alg"], b"\x00")
+    alg = (hex_format_bytes(1)).rjust(snoopy[1]["offset_size_of_file"] - snoopy[1]["offset_code_alg"], b"\x00")
 
     size = os.path.getsize(name_file)  # получение размера файла
-    size = (hex_format(size)).rjust(snoopy1[1]["offset_id"] - snoopy1[1]["offset_size_of_file"],b"\x00")
+    size = (hex_format_bytes(size)).rjust(snoopy[1]["offset_id"] - snoopy[1]["offset_size_of_file"], b"\x00")
 
-    id = (hex_format(file_for_codec["id"])).rjust(snoopy1[1]["offset_link"] - snoopy1[1]["offset_id"], b"\x00")
+    id = (hex_format_bytes(file_for_codec["id"])).rjust(snoopy[1]["offset_link"] - snoopy[1]["offset_id"], b"\x00")
 
     # получение абсолютного пути файла
     link = str(os.path.abspath(name_file)).encode()
-    link = link.rjust(snoopy1[1]["offset_data"] - snoopy1[1]["offset_link"], b"\x00")
+    link = link.rjust(snoopy[1]["offset_data"] - snoopy[1]["offset_link"], b"\x00")
 
     # запись данных из изходного файла с соответсвующей позиции
     with open(name_file, "rb") as f2:
         data_read = f2.read()
     data_snoopy2 = sig + ver + alg + size + id + link + data_read
 
-
     # добавление исходных данных в файл
     return data_snoopy2
 
 
-def coder_with_encryptiion(name_file, encrypt_dict):
+def coder_with_encryptiion_haffman(name_file, encrypt_dict):
 
     file_for_codec = read_signature_from_file(name_file)
 
-    sig = snoopy1[2]["signature"]
+    sig = snoopy[2]["signature"]
 
-    ver = (hex_format(snoopy1[2]["version"])).rjust(snoopy1[2]["offset_code_alg"] - snoopy1[2]["offset_version"], b"\x00")
+    ver = (hex_format_bytes(snoopy[2]["version"])).rjust(snoopy[2]["offset_code_alg"] - snoopy[2]["offset_version"], b"\x00")
 
-    alg = (hex_format(2)).rjust(snoopy1[2]["offset_size_of_file"] - snoopy1[2]["offset_code_alg"], b"\x00")
+    alg = (hex_format_bytes(2)).rjust(snoopy[2]["offset_size_of_file"] - snoopy[2]["offset_code_alg"], b"\x00")
 
-    id = (hex_format(file_for_codec["id"])).rjust(snoopy1[2]["offset_link"] - snoopy1[2]["offset_id"], b"\x00")
+    id = (hex_format_bytes(file_for_codec["id"])).rjust(snoopy[2]["offset_link"] - snoopy[2]["offset_id"], b"\x00")
 
     # получение абсолютного пути файла
     link = str(os.path.abspath(name_file)).encode()
-    link = link.rjust(snoopy1[2]["offset_dict_haf"] - snoopy1[2]["offset_link"], b"\x00")
+    link = link.rjust(snoopy[2]["offset_dict_haf"] - snoopy[2]["offset_link"], b"\x00")
 
     dict_haf = b''
     for index in encrypt_dict:
-        key = hex_format(ord(index))  # запись ключа
-        len_code_for_key = (hex_format(len(encrypt_dict[index])))  # запись длины кода для учета единиц
+        key = hex_format_bytes(ord(index))  # запись ключа
+        len_code_for_key = (hex_format_bytes(len(encrypt_dict[index])))  # запись длины кода для учета единиц
         # записываем кодировку. Если кодировка размером в 1 байт или 2, дописываем в начале нулевой байт
-        code_of_key = (hex_format(int(encrypt_dict[index], 2))).rjust(3, b'\x00')
+        code_of_key = (hex_format_bytes(int(encrypt_dict[index], 2))).rjust(3, b'\x00')
         dict_haf += key + len_code_for_key + code_of_key
-    dict_haf = dict_haf.ljust(snoopy1[2]["offset_data"] - snoopy1[2]["offset_dict_haf"], b'\x00')
+    dict_haf = dict_haf.ljust(snoopy[2]["offset_data"] - snoopy[2]["offset_dict_haf"], b'\x00')
 
     # запись данных из изходного файла с соответсвующей позиции
     with open(name_file, "rb") as f2:
         data_read = f2.read()
     data_read = bytes_to_256(data_read)
-    data_read, size = bin_to_hex(data_read, encrypt_dict)
+    data_read, size = bin_to_hex_haffman(data_read, encrypt_dict)
 
-    size = (hex_format(size)).rjust(snoopy1[2]["offset_id"] - snoopy1[2]["offset_size_of_file"], b"\x00")
+    size = (hex_format_bytes(size)).rjust(snoopy[2]["offset_id"] - snoopy[2]["offset_size_of_file"], b"\x00")
 
     data_snoopy2 = sig + ver + alg + size + id + link + dict_haf + data_read
 
@@ -180,57 +80,108 @@ def coder_with_encryptiion(name_file, encrypt_dict):
     return data_snoopy2
 
 
-def coder_analise(code_alg, list_code_alg):
-    prepared_file_for_report()
+def coder_with_encryptiion_rle(name_file):
 
-    if code_alg == 1:
+    file_for_codec = read_signature_from_file(name_file)
+
+    sig = snoopy[3]["signature"]
+
+    ver = (hex_format_bytes(snoopy[3]["version"])).rjust(snoopy[3]["offset_code_alg"] - snoopy[3]["offset_version"], b"\x00")
+
+    alg = (hex_format_bytes(3)).rjust(snoopy[3]["offset_size_of_file"] - snoopy[3]["offset_code_alg"], b"\x00")
+
+    id = (hex_format_bytes(file_for_codec["id"])).rjust(snoopy[3]["offset_link"] - snoopy[3]["offset_id"], b"\x00")
+
+    # получение абсолютного пути файла
+    link = str(os.path.abspath(name_file)).encode()
+    link = link.rjust(snoopy[3]["offset_data"] - snoopy[3]["offset_link"], b"\x00")
+
+
+    # запись данных из изходного файла с соответсвующей позиции
+    with open(name_file, "rb") as f2:
+        data_read = f2.read()
+
+    data_read = bytes_to_256(data_read)
+    data_read = coding_rle(data_read)
+
+    size = (hex_format_bytes(len(data_read))).rjust(snoopy[3]["offset_id"] - snoopy[3]["offset_size_of_file"], b"\x00")
+
+    data_snoopy2 = sig + ver + alg + size + id + link + data_read
+
+    # добавление исходных данных в файл
+    return data_snoopy2
+
+
+def coder_analise(code_alg, list_code_alg):
+    prepared_file_for_report(name_coder_file, name_files)
+
+    if code_alg == "without_encryptiion":  # шифровании файлов в массее
         # перебор указанных файлов
         for name_file in name_files.split():
             data_snoopy2 = coder_without_encryptiion(name_file)
-            write_into_file(data_snoopy2)
-    elif code_alg == 2:  # шифровании файлов в массее
-        encrypt_dict = get_encrypt_dict(name_files)  # Получаем словарь для шифрования
+            write_into_file(data_snoopy2, name_coder_file)
+
+    elif code_alg == "haffman":  # шифровании файлов в массее
+        encrypt_dict = get_encrypt_dict_for_haffman(name_files)  # Получаем словарь для шифрования
 
         for name_file in name_files.split():
-            data_snoopy2 = coder_with_encryptiion(name_file, encrypt_dict)
-            write_into_file(data_snoopy2)
+            data_snoopy2 = coder_with_encryptiion_haffman(name_file, encrypt_dict)
+            write_into_file(data_snoopy2, name_coder_file)
 
-    elif code_alg == 3:  # для каждого файла свой код шифрования
+    elif code_alg == "rle":  # шифровании файлов в массее
+        # перебор указанных файлов
+        for name_file in name_files.split():
+            data_snoopy2 = coder_with_encryptiion_rle(name_file)
+            write_into_file(data_snoopy2, name_coder_file)
+
+    elif code_alg == "user's choice":  # для каждого файла свой код шифрования
         index = 0  # индекс для перебора значений шифрования для файлов
         # перебор указанных файлов
         for name_file in name_files.split():
-            if list_code_alg[index] == 1:
+            if list_code_alg[index] == "without_encryptiion":
                 data_snoopy2 = coder_without_encryptiion(name_file)
-                write_into_file(data_snoopy2)
-            elif list_code_alg[index] == 2:
-                encrypt_dict = get_encrypt_dict(name_file)  # Получаем словарь для шифрования
-                data_snoopy2 = coder_with_encryptiion(name_file, encrypt_dict)
-                write_into_file(data_snoopy2)
-
+                write_into_file(data_snoopy2, name_coder_file)
+            elif list_code_alg[index] == "haffman":
+                encrypt_dict = get_encrypt_dict_for_haffman(name_file)  # Получаем словарь для шифрования
+                data_snoopy2 = coder_with_encryptiion_haffman(name_file, encrypt_dict)
+                write_into_file(data_snoopy2, name_coder_file)
+            elif list_code_alg[index] == "rle":
+                data_snoopy2 = coder_with_encryptiion_rle(name_file)
+                write_into_file(data_snoopy2, name_coder_file)
             index += 1
 
-    elif code_alg == 4:
+    elif code_alg == "universal":
         for name_file in name_files.split():
-            encrypt_dict = get_encrypt_dict(name_file)  # Получаем словарь для шифрования
-            data_snoopy2 = coder_with_encryptiion(name_file, encrypt_dict)  # хаффман (получение шифрованных данных)
 
-            size_with_haffman = len(data_snoopy2)
-            size_wtihout_encryptiion = snoopy1[1]["offset_data"] + os.path.getsize(name_file)
-            if size_with_haffman > size_wtihout_encryptiion:
-                print(1)
-                data_snoopy2 = coder_without_encryptiion(name_file)
-            print(name_file)
-            write_into_file(data_snoopy2)
+            data_snoopy_with_encryptiion = coder_without_encryptiion(name_file)
+
+            encrypt_dict = get_encrypt_dict_for_haffman(name_file)  # Получаем словарь для шифрования
+            data_snoopy_haffman = coder_with_encryptiion_haffman(name_file, encrypt_dict)  # хаффман (получение шифрованных данных)
+
+            data_snoopy_rle = coder_with_encryptiion_rle(name_file)
+
+            size_wtihout_encryptiion = len(data_snoopy_with_encryptiion)
+            size_with_haffman = len(data_snoopy_haffman)
+            size_with_rle = len(data_snoopy_rle)
+
+            data_snoopy2 = b""
+            if (size_with_haffman < size_wtihout_encryptiion) and (size_with_haffman < size_with_rle):
+                data_snoopy2 = data_snoopy_haffman
+            elif (size_wtihout_encryptiion < size_with_haffman) and (size_wtihout_encryptiion < size_with_rle):
+                data_snoopy2 = data_snoopy_with_encryptiion
+            elif (size_with_rle < size_wtihout_encryptiion) and (size_with_rle < size_with_haffman):
+                data_snoopy2 = data_snoopy_rle
+            write_into_file(data_snoopy2, name_coder_file)
 
 
 def decoder_without_encryptiion(file):
-    size = file.read(snoopy1[1]["offset_id"] - snoopy1[1]["offset_size_of_file"])
+    size = file.read(snoopy[1]["offset_id"] - snoopy[1]["offset_size_of_file"])
     size = int_format(size)
 
-    id = file.read(snoopy1[1]["offset_link"] - snoopy1[1]["offset_id"])
+    id = file.read(snoopy[1]["offset_link"] - snoopy[1]["offset_id"])
     id = int_format(id)
 
-    link = file.read(snoopy1[1]["offset_data"] - snoopy1[1]["offset_link"])
+    link = file.read(snoopy[1]["offset_data"] - snoopy[1]["offset_link"])
     link = link.lstrip(b"\x00").decode()  # удаляем нунжные нули вначале и декодируем
 
     link_abs = link[0:link.rfind("\\") - len(link)]  # абсолютный путь без названия файла
@@ -243,21 +194,21 @@ def decoder_without_encryptiion(file):
         f5.write(data_snoopy)
 
 
-def decoder_with_encryptiion(file):
-    size = file.read(snoopy1[2]["offset_id"] - snoopy1[2]["offset_size_of_file"])
+def decoder_with_encryptiion_haffman(file):
+    size = file.read(snoopy[2]["offset_id"] - snoopy[2]["offset_size_of_file"])
     size = int_format(size)
 
-    id = file.read(snoopy1[2]["offset_link"] - snoopy1[2]["offset_id"])
+    id = file.read(snoopy[2]["offset_link"] - snoopy[2]["offset_id"])
     id = int_format(id)
 
-    link = file.read(snoopy1[2]["offset_dict_haf"] - snoopy1[2]["offset_link"])
+    link = file.read(snoopy[2]["offset_dict_haf"] - snoopy[2]["offset_link"])
     link = link.lstrip(b"\x00").decode()  # удаляем нунжные нули вначале и декодируем
 
     link_abs = link[0:link.rfind("\\") - len(link)]  # абсолютный путь без названия файла
     if not os.path.exists(link_abs):
         os.makedirs(link_abs)
 
-    dict_frequency = (file.read(snoopy1[2]["offset_data"] - snoopy1[2]["offset_dict_haf"]))
+    dict_frequency = (file.read(snoopy[2]["offset_data"] - snoopy[2]["offset_dict_haf"]))
 
     encrypt_dict = {}
     for i in range(0, len(dict_frequency), 5):
@@ -273,7 +224,29 @@ def decoder_with_encryptiion(file):
     string = str(bin(int(data_snoopy, 16))[2:])
     string = string[1:]  # избавляемся от первой единицы, которая была добавлена при кодирования, чтобы не потерялись нули
     data_snoopy = decoding_haffman(string, encrypt_dict)
-    data_snoopy = str_to_bytes(data_snoopy)
+    data_snoopy = bytearray.fromhex(str_to_bytes(data_snoopy))
+
+    with open(link, "wb") as f5:
+        f5.write(data_snoopy)
+
+
+def decoder_with_encryptiion_rle(file):
+    size = file.read(snoopy[3]["offset_id"] - snoopy[3]["offset_size_of_file"])
+    size = int_format(size)
+
+    id = file.read(snoopy[3]["offset_link"] - snoopy[3]["offset_id"])
+    id = int_format(id)
+
+    link = file.read(snoopy[3]["offset_data"] - snoopy[3]["offset_link"])
+    link = link.lstrip(b"\x00").decode()  # удаляем нунжные нули вначале и декодируем
+
+    link_abs = link[0:link.rfind("\\") - len(link)]  # абсолютный путь без названия файла
+    if not os.path.exists(link_abs):
+        os.makedirs(link_abs)
+
+    data_snoopy = file.read(size)
+
+    data_snoopy = decoding_rle(data_snoopy)
 
     with open(link, "wb") as f5:
         f5.write(data_snoopy)
@@ -284,22 +257,24 @@ def decoder_analise():
 
     with open(name_coder_file, "rb") as file:
         while file.tell() != size_coder_file:
-            bytes_signature = file.read(len(snoopy1[1]["signature"]))
+            bytes_signature = file.read(len(snoopy[1]["signature"]))
             info = get(bytes_signature)
             if info != "snoopy":
                 print("Декодирование невозможно, сигнатура файла не соответсвует описанной")
                 break
 
-            ver = file.read(snoopy1[1]["offset_code_alg"] - snoopy1[1]["offset_version"])
+            ver = file.read(snoopy[1]["offset_code_alg"] - snoopy[1]["offset_version"])
             ver = int_format(ver)
 
-            alg = file.read(snoopy1[1]["offset_size_of_file"] - snoopy1[1]["offset_code_alg"])
+            alg = file.read(snoopy[1]["offset_size_of_file"] - snoopy[1]["offset_code_alg"])
             alg = int_format(alg)
 
             if alg == 1:
                 decoder_without_encryptiion(file)
             elif alg == 2:
-                decoder_with_encryptiion(file)
+                decoder_with_encryptiion_haffman(file)
+            elif alg == 3:
+                decoder_with_encryptiion_rle(file)
 
 
 def decoder_print():
@@ -348,29 +323,36 @@ def main():
         if a == 1:
             print("Выберите способ шифрования:")
             print("1 - без шифрования")
-            print("2 - с шифрование")
+            print("2 - с шифрование (алгоритм Хаффмана)")
+            print("3 - с шифрование (RLE алгоритм)")
             count = int(input())
             if count == 1:
-                coder_print(1)
+                coder_print("without_encryptiion")
             elif count == 2:
-                coder_print(2)
-
+                coder_print("haffman")
+            elif count == 3:
+                coder_print("rle")
         elif a == 2:
             print("Выберите способ шифрования для каждого файла:")
             print("1 - без шифрования")
-            print("2 - с шифрованием")
+            print("2 - с шифрование (алгоритм Хаффмана)")
+            print("3 - с шифрование (RLE алгоритм)")
             list_code_alg = []
             for i in name_files.split():
                 print("Для файла", os.path.abspath(i), ": ", end="")
                 count = int(input())
-                while count not in [1, 2]:
-                    print("Введите 1 или 2: ", end="")
+                while count not in [1, 2, 3]:
+                    print("Введите 1, 2 или 3: ", end="")
                     count = int(input())
-                list_code_alg.append(count)
-            print(list_code_alg)
-            coder_print(3, list_code_alg)
+                if count == 1:
+                    list_code_alg.append("without_encryptiion")
+                elif count == 2:
+                    list_code_alg.append("haffman")
+                elif count == 3:
+                    list_code_alg.append("rle")
+            coder_print("user's choice", list_code_alg)
         elif a == 3:
-            coder_print(4)
+            coder_print("universal")
     elif q == 2:
         decoder_print()
 
